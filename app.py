@@ -131,12 +131,16 @@ def generate_recipes():
         # Call OpenAI API
         print("=== Calling OpenAI API ===")
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=2000,
-                temperature=0.7
-            )
+# Use the newer OpenAI client format
+client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+response = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": prompt}],
+    max_tokens=2000,
+    temperature=0.7
+)
+
+
             
             print(f"OpenAI response type: {type(response)}")
             print(f"OpenAI response: {response}")
