@@ -140,9 +140,6 @@ def generate_recipes():
             temperature=0.7
         )
 
-
-            
-            print(f"OpenAI response: {response}")
             
             # Parse response
             response_content = response.choices[0].message.content.strip()
