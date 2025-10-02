@@ -193,5 +193,3 @@ def create_fallback_recipe(ingredients, non_vegan_items, cooking_experience):
         "recipes": [recipe],
         "encouraging_message": f"Wonderful ingredient choices! You're creating an authentic Mediterranean-style dish that celebrates the region's tradition of simple, flavorful cooking with {', '.join(ingredient_list[:3])}{'...' if len(ingredient_list) > 3 else ''}."
     }
-
-
