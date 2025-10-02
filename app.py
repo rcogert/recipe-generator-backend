@@ -142,7 +142,6 @@ def generate_recipes():
 
 
             
-            print(f"OpenAI response type: {type(response)}")
             print(f"OpenAI response: {response}")
             
             # Parse response
