@@ -3,6 +3,7 @@ import openai
 import os
 import json
 import re
+import requests
 from datetime import datetime
 from fallback_recipes import create_fallback_recipe
 
