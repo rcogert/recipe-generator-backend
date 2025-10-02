@@ -98,7 +98,6 @@ def generate_recipes():
         
         data = request.get_json()
         print(f"Request data: {data}")
-        print(f"Data type: {type(data)}")
         
         if not data:
             return jsonify({
@@ -110,8 +109,6 @@ def generate_recipes():
         dietary_interest = data.get('dietary_interest', 'just_curious')
         ingredients = data.get('ingredients', '')
         
-        print(f"Parsed values - cooking: {cooking_experience}, dietary: {dietary_interest}, ingredients: {ingredients}")
-        
         if not ingredients.strip():
             return jsonify({
                 'success': False,
@@ -119,58 +116,31 @@ def generate_recipes():
             }), 400
         
         # Analyze ingredients for non-vegan items
-        print("=== Analyzing ingredients ===")
         non_vegan_items = detect_non_vegan_ingredients(ingredients)
-        print(f"Non-vegan items detected: {non_vegan_items}")
         
         # Generate prompt
-        print("=== Creating prompt ===")
         prompt = create_recipe_prompt(cooking_experience, dietary_interest, ingredients, non_vegan_items)
-        print(f"Prompt created, length: {len(prompt)}")
         
-        # Call OpenAI API
-        print("=== Calling OpenAI API ===")
+        # Call OpenAI API or use fallback
         try:
-        # Use the newer OpenAI client format
-         client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=2000,
-            temperature=0.7
-        )
-
-            
-            # Parse response
+            client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=2000,
+                temperature=0.7
+            )
             response_content = response.choices[0].message.content.strip()
-            print(f"OpenAI response content: {response_content}")
             
-            # Clean up the response to ensure it's valid JSON
             if response_content.startswith('```json'):
                 response_content = response_content[7:]
             if response_content.endswith('```'):
                 response_content = response_content[:-3]
             
-            try:
-                recipe_data = json.loads(response_content)
-                print(f"Parsed recipe data: {recipe_data}")
-            except json.JSONDecodeError as e:
-                print(f"JSON decode error: {e}")
-                print(f"Response content: {response_content}")
-                # Use fallback recipe
-                recipe_data = create_fallback_recipe(ingredients, non_vegan_items, cooking_experience)
-                
-        except Exception as openai_error:
-            print(f"OpenAI API error: {openai_error}")
-            print("Using fallback recipe generation...")
-            # Use fallback recipe when OpenAI fails
+            recipe_data = json.loads(response_content)
+        except:
             recipe_data = create_fallback_recipe(ingredients, non_vegan_items, cooking_experience)
         
-        # Track user interaction for analytics
-        print("=== Tracking user interaction ===")
-        track_user_interaction(cooking_experience, dietary_interest, non_vegan_items, ingredients)
-        
-        print("=== Returning success response ===")
         return jsonify({
             'success': True,
             'recipes': recipe_data['recipes'],
@@ -180,8 +150,6 @@ def generate_recipes():
         })
         
     except Exception as e:
-        import traceback
-        print(f"Full error traceback: {traceback.format_exc()}")
         print(f"Error generating recipes: {str(e)}")
         return jsonify({
             'success': False,
@@ -194,8 +162,6 @@ def send_email():
     try:
         data = request.json
         email = data.get('email', '').strip()
-        recipes = data.get('recipes', [])
-        user_profile = data.get('user_profile', {})
         
         if not email:
             return jsonify({
@@ -211,16 +177,34 @@ def send_email():
                 'error': 'Please provide a valid email address.'
             }), 400
         
-        # TODO: Integrate with AWeber
-        # For now, we'll just simulate success
-        # aweber_result = send_to_aweber(email, user_profile)
-        
-        # TODO: Send email with recipes
-        # For now, we'll just return success
+        # AWeber Integration
+        try:
+            name = email.split('@')[0].replace('.', ' ').replace('_', ' ').title()
+            
+            aweber_data = {
+                'listname': 'awlist6861386',
+                'redirect': 'https://www.aweber.com/thankyou-coi.htm?m=text',
+                'meta_required': 'name,email',
+                'meta_tooltip': '',
+                'meta_split_id': '',
+                'unit': '919276201',
+                'name': name,
+                'email': email,
+                'submit': 'Submit'
+            }
+            
+            aweber_response = requests.post(
+                'https://www.aweber.com/scripts/addlead.pl',
+                data=aweber_data,
+                timeout=10
+             )
+            
+        except Exception as aweber_error:
+            print(f"AWeber integration error: {aweber_error}")
         
         return jsonify({
             'success': True,
-            'message': 'Great! Your recipes have been saved. Check your email shortly!'
+            'message': 'Great! Your recipe has been saved. Check your email shortly!'
         })
         
     except Exception as e:
@@ -229,24 +213,6 @@ def send_email():
             'success': False,
             'error': 'Sorry, something went wrong. Please try again.'
         }), 500
-
-def track_user_interaction(cooking_exp, dietary_interest, non_vegan_items, ingredients):
-    """
-    Track user interactions for analytics
-    """
-    analytics_data = {
-        'cooking_experience': cooking_exp,
-        'dietary_interest': dietary_interest,
-        'had_non_vegan_items': len(non_vegan_items) > 0,
-        'non_vegan_count': len(non_vegan_items),
-        'non_vegan_items': non_vegan_items,
-        'ingredient_count': len(ingredients.split(',')),
-        'timestamp': datetime.now().isoformat()
-    }
-    
-    # For now, just print to console
-    # In production, this would go to your analytics service
-    print(f"User interaction: {analytics_data}")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
